@@ -2,7 +2,7 @@ services:
   nginx1:
     build:
       context: ./nginx
-    image: cdn_project/nginx1:latest
+    image: defridamn/nginx1:latest
     container_name: nginx1
     ports:
       - "8081:80"
@@ -15,7 +15,7 @@ services:
   nginx2:
     build:
       context: ./nginx
-    image: cdn_project/nginx2:latest
+    image: defridamn/nginx2:latest
     container_name: nginx2
     ports:
       - "8082:80"
@@ -42,7 +42,7 @@ services:
   nginx-proxy:
     build:
       context: ./nginx-proxy
-    image: cdn_project/nginx-proxy:latest
+    image: defridamn/nginx-proxy:latest
     container_name: nginx-proxy
     ports:
       - "80:80"
@@ -79,7 +79,7 @@ services:
   frontend:
     build:
       context: ./frontend
-    image: cdn_project/frontend:latest
+    image: defridamn/frontend:latest
     container_name: frontend
     ports:
       - "5000:80"
