@@ -1,15 +1,56 @@
-import React from 'react';
-import { ChonkyIconFA, FileBrowser, FileNavbar, FileList, FileContextMenu, FileContextMenuItem } from 'chonky';
+import React, { useEffect, useState } from 'react';
+import { setChonkyDefaults, FileBrowser, FileNavbar, FileList, FileContextMenu } from 'chonky';
+import { ChonkyIconFA } from 'chonky-icon-fontawesome';
+
+setChonkyDefaults({
+  iconComponent: ChonkyIconFA,
+  disableSelection: true,
+  disableDragAndDropProvider: true,
+});
 
 function App() {
-  const files = [
-    { id: '1', name: 'file1.txt', isDir: false },
-    { id: '2', name: 'file2.jpg', isDir: false },
-    { id: '3', name: 'folder1', isDir: true },
-  ];
+  const [files, setFiles] = useState([]);
+  const [currentPath, setCurrentPath] = useState('/content'); // Абсолютный путь
+
+  useEffect(() => {
+    // Загружаем содержимое текущей директории
+    fetch(`http://45.93.200.200${currentPath}/`) // Убедитесь, что путь корректен
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then((data) => {
+        const sanitizedFiles = data.map((file, index) => ({
+          id: file.name || `file-${index}`,
+          name: file.name,
+          isDir: file.type === 'directory',
+          size: file.size,
+          modDate: new Date(file.mtime),
+        }));
+        setFiles(sanitizedFiles);
+      })
+      .catch((error) => console.error('Error fetching files:', error));
+  }, [currentPath]);
 
   const handleFileAction = (action) => {
     console.log(action);
+
+    if (action.id === 'mouse_click_file') {
+      const clickedFile = action.payload.file;
+
+      if (clickedFile) {
+        if (clickedFile.isDir) {
+          // Переход в директорию
+          setCurrentPath(`${currentPath}/${clickedFile.name}`);
+        } else {
+          // Открытие файла
+          const fileUrl = `http://45.93.200.200${currentPath}/${clickedFile.name}`;
+          window.open(fileUrl, '_blank');
+        }
+      }
+    }
   };
 
   return (
@@ -18,10 +59,7 @@ function App() {
       <FileBrowser files={files} onFileAction={handleFileAction}>
         <FileNavbar />
         <FileList />
-        <FileContextMenu>
-          <FileContextMenuItem icon={ChonkyIconFA.folder} onClick={() => alert('Folder clicked')}>Open Folder</FileContextMenuItem>
-          <FileContextMenuItem icon={ChonkyIconFA.download} onClick={() => alert('Download clicked')}>Download</FileContextMenuItem>
-        </FileContextMenu>
+        <FileContextMenu />
       </FileBrowser>
     </div>
   );

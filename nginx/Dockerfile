@@ -1,8 +1,7 @@
-FROM nginx/nginx-prometheus-exporter:latest
+FROM nginx:alpine
 
-COPY nginx.conf /etc/nginx/nginx.conf
-COPY content /usr/share/nginx/html/content
+COPY ./nginx.conf /etc/nginx/nginx.conf
 
-EXPOSE 80 9113
+VOLUME /var/log/nginx
 
-CMD ["nginx-prometheus-exporter", "-nginx.scrape-uri=http://localhost/metrics"]
+EXPOSE 80

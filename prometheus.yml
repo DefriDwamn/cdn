@@ -1,7 +1,11 @@
 global:
-  scrape_interval: 15s
+  scrape_interval: 30s
 
 scrape_configs:
   - job_name: 'nginx'
     static_configs:
-      - targets: ['nginx-proxy:80']
+      - targets: ['nginx-prometheus-exporter:9113']
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'nginx_http_requests_total|nginx_http_connections_active|nginx_up|nginx_connections_writing|nginx_connections_waiting'
+        action: keep
