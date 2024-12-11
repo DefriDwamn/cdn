@@ -1,0 +1,34 @@
+name: Pipeline
+
+on:
+  push:
+    branches:
+      - main 
+  pull_request:
+    branches:
+        - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Build Images
+      run: |
+        docker-compose -f docker-compose.yml build
+
+    - name: Save and transfer images
+      run: |
+        docker save -o app_image.tar my_app_image:latest
+        scp -o StrictHostKeyChecking=no app_image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/app_image.tar
+
+    - name: Deploy
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+        docker load < /tmp/app_image.tar
+        cd ~/cdn
+        docker compose up -d --remove-orphans
+        EOF
