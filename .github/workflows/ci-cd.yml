@@ -44,7 +44,6 @@ jobs:
         scp -o StrictHostKeyChecking=no nginx_proxy_image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/nginx_proxy_image.tar
         scp -o StrictHostKeyChecking=no frontend_image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/frontend_image.tar
 
-
     - name: Deploy
       run: |
         ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
