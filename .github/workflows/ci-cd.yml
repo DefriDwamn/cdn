@@ -3,28 +3,44 @@ name: Pipeline
 on:
   push:
     branches:
-      - main 
+      - main
   pull_request:
     branches:
-        - main
+      - main
 
 jobs:
-  build-and-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    
-    - name: Install Docker Compose
-      run: |
-        sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
 
-    - name: Build Images
-      run: |
-        docker-compose -f docker-compose.yml build
+    - name: Login to DockerHub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
 
+    - name: Build and push images
+      run: |
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/nginx1:latest -f ./nginx/Dockerfile ./nginx
+        docker push ${{ secrets.DOCKER_USERNAME }}/nginx1:latest
+
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/nginx2:latest -f ./nginx/Dockerfile ./nginx
+        docker push ${{ secrets.DOCKER_USERNAME }}/nginx2:latest
+
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/nginx-proxy:latest -f ./nginx-proxy/Dockerfile ./nginx-proxy
+        docker push ${{ secrets.DOCKER_USERNAME }}/nginx-proxy:latest
+
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/frontend:latest -f ./frontend/Dockerfile ./frontend
+        docker push ${{ secrets.DOCKER_USERNAME }}/frontend:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
     - name: Set up SSH
       run: |
         mkdir -p ~/.ssh
@@ -32,25 +48,11 @@ jobs:
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Save and transfer images
-      run: |
-        docker save -o nginx1_image.tar cdn_project/nginx1:latest
-        docker save -o nginx2_image.tar cdn_project/nginx2:latest
-        docker save -o nginx_proxy_image.tar cdn_project/nginx-proxy:latest
-        docker save -o frontend_image.tar cdn_project/frontend:latest
-        
-        scp -o StrictHostKeyChecking=no nginx1_image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/nginx1_image.tar
-        scp -o StrictHostKeyChecking=no nginx2_image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/nginx2_image.tar
-        scp -o StrictHostKeyChecking=no nginx_proxy_image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/nginx_proxy_image.tar
-        scp -o StrictHostKeyChecking=no frontend_image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/frontend_image.tar
-
     - name: Deploy
       run: |
         ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-        docker load < /tmp/nginx1_image.tar
-        docker load < /tmp/nginx2_image.tar
-        docker load < /tmp/nginx_proxy_image.tar
-        docker load < /tmp/frontend_image.tar
+        docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKER_PASSWORD }}"
         cd ~/cdn
+        docker compose pull
         docker compose up -d --remove-orphans
         EOF
