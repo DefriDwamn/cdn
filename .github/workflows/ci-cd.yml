@@ -34,13 +34,24 @@ jobs:
 
     - name: Save and transfer images
       run: |
-        docker save -o app_image.tar my_app_image:latest
-        scp -o StrictHostKeyChecking=no app_image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/app_image.tar
+        docker save -o nginx1_image.tar cdn_project/nginx1:latest
+        docker save -o nginx2_image.tar cdn_project/nginx2:latest
+        docker save -o nginx_proxy_image.tar cdn_project/nginx-proxy:latest
+        docker save -o frontend_image.tar cdn_project/frontend:latest
+        
+        scp -o StrictHostKeyChecking=no nginx1_image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/nginx1_image.tar
+        scp -o StrictHostKeyChecking=no nginx2_image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/nginx2_image.tar
+        scp -o StrictHostKeyChecking=no nginx_proxy_image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/nginx_proxy_image.tar
+        scp -o StrictHostKeyChecking=no frontend_image.tar ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/frontend_image.tar
+
 
     - name: Deploy
       run: |
         ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-        docker load < /tmp/app_image.tar
+        docker load < /tmp/nginx1_image.tar
+        docker load < /tmp/nginx2_image.tar
+        docker load < /tmp/nginx_proxy_image.tar
+        docker load < /tmp/frontend_image.tar
         cd ~/cdn
         docker compose up -d --remove-orphans
         EOF
